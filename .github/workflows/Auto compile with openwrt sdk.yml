@@ -11,10 +11,10 @@ on:
         description: 'SSH connection to Actions'
         required: false
         default: 'false'
-    force_build:
-      description: 'Force build even if no update'
-      required: false
-      default: 'false'
+      force_build:
+        description: 'Force build even if no update'
+        required: false
+        default: 'false'
 env:
   TZ: Asia/Shanghai
   passwall: ${{ github.repository }}
