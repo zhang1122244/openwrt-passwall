@@ -11,6 +11,10 @@ on:
         description: 'SSH connection to Actions'
         required: false
         default: 'false'
+    force_build:
+      description: 'Force build even if no update'
+      required: false
+      default: 'false'
 env:
   TZ: Asia/Shanghai
   passwall: ${{ github.repository }}
@@ -88,7 +92,7 @@ jobs:
   job_build_passwall:
     name: Build passwall [${{ matrix.ver }}]
     needs: job_check
-    if: needs.job_check.outputs.has_update == 'true'
+    if: needs.job_check.outputs.has_update == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force_build == 'true')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -201,7 +205,8 @@ jobs:
 
 
   job_auto_compile:
-    if: ${{ needs.job_check.outputs.has_update == 'true' && needs.job_check.outputs.prerelease == 'false' }}
+    if: ${{ (needs.job_check.outputs.has_update == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force_build == 'true'))
+     && needs.job_check.outputs.prerelease == 'false' }}
     needs: job_check
     runs-on: ubuntu-latest
     name: build (${{ matrix.ver }}-${{ matrix.platform }})
