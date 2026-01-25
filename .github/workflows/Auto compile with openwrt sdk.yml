@@ -32,7 +32,7 @@ jobs:
     name: Check Version
     runs-on: ubuntu-latest
     outputs:
-      passwall_version: ${{ steps.check_version.outputs.latest_version }}
+      passwall_version: ${{ steps.check_version.outputs.remote_latest_version }}
       has_update: ${{ steps.check_version.outputs.has_update }}
       prerelease: ${{ steps.check_version.outputs.prerelease }}
     steps:
@@ -41,7 +41,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.ref_name }}
-
+  
       - name: Check version
         id: check_version
         env:
@@ -50,43 +50,45 @@ jobs:
           cd luci-app-passwall
           latest_version=$(awk -F ':=' '/^PKG_VERSION:=|^PKG_RELEASE:=/ {print $2}' Makefile | sed ':a;N;s/\$(PKG_VERSION)-//;s/\n$//;s/\n/-/;ba')
           echo "latest_version=${latest_version}" >> $GITHUB_OUTPUT
-
+  
           prerelease=$([ "${{ github.ref_name }}" == "main" ] && echo false || echo true)
           echo "prerelease=${prerelease}" >> $GITHUB_OUTPUT
-
-          remote_latest_version=$(wget -qO- -t1 -T2 ${{env.url_tags}} | jq -r '.tag_name')
-
+  
+          remote_latest_version=$(wget -qO- -t1 -T2 ${{ env.url_tags }} | jq -r '.tag_name')
+          echo "remote_latest_version=${remote_latest_version}" >> $GITHUB_OUTPUT
+  
           if [ -z "$remote_latest_version" ] || [ "$remote_latest_version" = "null" ]; then
             echo "Failed to fetch remote tags"
             echo "has_update=true" >> $GITHUB_OUTPUT
             exit 0
           fi
           echo "Remote latest: $remote_latest_version"
-
+          echo "Local  latest: $latest_version"
+  
           if [ "$latest_version" = "$remote_latest_version" ]; then
             echo "has_update=false" >> $GITHUB_OUTPUT
           else
             echo "has_update=true" >> $GITHUB_OUTPUT
           fi
-
+  
       - name: Prepare release
         if: steps.check_version.outputs.has_update == 'true'
         run: |
           echo "## :mega:Update content" >> release.txt
-          echo "![](https://img.shields.io/github/downloads/${{ env.passwall }}/${{steps.check_version.outputs.latest_version}}/total?style=flat-square)" >> release.txt
+          echo "![](https://img.shields.io/github/downloads/${{ env.passwall }}/${{ steps.check_version.outputs.remote_latest_version }}/total?style=flat-square)" >> release.txt
           echo "### Passwall Info" >> release.txt
-          echo "**:minidisc: Passwall Version: ${{steps.check_version.outputs.latest_version}}**" >> release.txt
+          echo "**:minidisc: Passwall Version: ${{ steps.check_version.outputs.remote_latest_version }}**" >> release.txt
           touch release.txt
-
+  
       - name: Generate new tag & release
         if: steps.check_version.outputs.has_update == 'true'
         uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{steps.check_version.outputs.latest_version}}
+          tag_name: ${{ steps.check_version.outputs.remote_latest_version }}
           target_commitish: ${{ github.ref_name }}
-          prerelease: ${{steps.check_version.outputs.prerelease}}
+          prerelease: ${{ steps.check_version.outputs.prerelease }}
           body_path: release.txt
 
 
