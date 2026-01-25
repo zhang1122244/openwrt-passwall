@@ -224,7 +224,7 @@ jobs:
 
           - platform: aarch64_cortex-a53
             url_sdk: https://downloads.openwrt.org/releases/24.10.4/targets/mvebu/cortexa53/openwrt-sdk-24.10.4-mvebu-cortexa53_gcc-13.3.0_musl.Linux-x86_64.tar.zst
-          #   ver: "ipk"
+            ver: "ipk"
 
           # - platform: aarch64_cortex-a72
           #   url_sdk: https://downloads.openwrt.org/releases/24.10.4/targets/mvebu/cortexa72/openwrt-sdk-24.10.4-mvebu-cortexa72_gcc-13.3.0_musl.Linux-x86_64.tar.zst
@@ -380,20 +380,24 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.25.6' # 设置为所需版本的Go- name: ${{ matrix.platform }} sdk download
-          run: |
-            wget ${{ matrix.url_sdk }}
-            file_name=$(echo ${{matrix.url_sdk}} | awk -F/ '{print $NF}')
-            mkdir sdk
-            if [[ $file_name == *.tar.xz ]]; then
-              tar -xJf $file_name -C ./sdk --strip-components=1
-            elif [[ $file_name == *.tar.zst ]]; then
-              tar --zstd -x -f $file_name -C ./sdk --strip-components=1
-            else
-              echo "Unsupported file format: $file_name"
-              exit 1
-            fi
-            cd sdk
+          go-version: '1.25.6'
+
+      - name: ${{ matrix.platform }} sdk download
+        run: |
+          wget -nv "${{ matrix.url_sdk }}"
+          file_name=$(echo "${{ matrix.url_sdk }}" | awk -F/ '{print $NF}')
+          rm -rf sdk
+          mkdir -p sdk
+          if [[ $file_name == *.tar.xz ]]; then
+            tar -xJf "$file_name" -C ./sdk --strip-components=1
+          elif [[ $file_name == *.tar.zst ]]; then
+            tar --zstd -x -f "$file_name" -C ./sdk --strip-components=1
+          else
+            echo "Unsupported file format: $file_name"
+            exit 1
+          fi
+          test -d sdk && test -f sdk/feeds.conf.default && test -d sdk/scripts
+          ls -la sdk | head
       - name: SSH connection to Actions
         uses: mxschmitt/action-tmate@v3.13
         if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
